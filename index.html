@@ -1,104 +1,86 @@
 <!doctype html>
 <html lang="zh-CN">
+<head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="referrer" content="no-referrer">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; form-action 'none'; base-uri 'none'">
-<title>收件箱入口</title>
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'unsafe-inline'; media-src blob:; form-action 'none'; base-uri 'none'">
+<title>收件箱</title>
 <style>
 *{box-sizing:border-box}
-body{min-height:100svh;margin:0;display:grid;place-items:center;background:#f4efe6;color:#382d24;font:16px/1.55 -apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif}
-main{width:min(calc(100% - 32px),430px);padding:clamp(22px,6vw,36px);background:#fffdf8;border:1px solid #e4d9ca;border-radius:26px;box-shadow:0 12px 38px #58472e0e}
-h1{font-size:30px;letter-spacing:-.03em;line-height:1.2;margin:0 0 10px}
-p{color:#706050;margin:0 0 22px}
-fieldset{display:flex;gap:4px;border:0;padding:4px;background:#efe7d9;border-radius:14px;margin:0 0 20px}
-fieldset label{position:relative;flex:1;text-align:center;padding:8px;border-radius:11px;cursor:pointer}
-fieldset input{position:absolute;opacity:0}
-fieldset label:has(:checked){background:#fffdf8;color:#714527;box-shadow:0 2px 6px #37251316}
-fieldset label:focus-within,input:focus-visible,button:focus-visible{outline:2px solid #975e39;outline-offset:2px}
-label[for]{display:block;font-weight:600;margin-bottom:6px}
-#addr,button{font:inherit;width:100%;border-radius:13px;padding:12px}
-#addr{color:inherit;background:#fcf8f0;border:1px solid #d7c9b8}
-button{margin-top:16px;border:0;background:#88573a;color:white;font-weight:650;cursor:pointer}
-small{display:block;color:#756454;margin-top:8px} #error{color:#963f33}
+[hidden]{display:none!important}
+:root{color-scheme:light;font:16px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;color:#392f28;background:#f5f0e7}
+body{margin:0}
+main{width:min(100%,510px);margin:auto;padding:clamp(26px,7vh,68px) clamp(17px,5vw,30px) max(28px,env(safe-area-inset-bottom))}
+h1,h2,p{margin:0}
+h1{font-size:clamp(30px,5vw,40px);letter-spacing:-.045em;line-height:1.15}
+header p{margin:9px 0 20px;color:#6c6055}
+section{padding:18px;margin-top:14px;background:#fffcf7;border:1px solid #e3d8ca;border-radius:20px}
+.row{display:flex;align-items:center;justify-content:space-between;gap:12px}
+h2{font-size:19px;line-height:1.35}
+small,.hint{display:block;color:#75695e;font-size:.855rem}
+.hint{margin:5px 0 12px}
+a,button{font:inherit;font-weight:650;text-decoration:none;cursor:pointer;color:#704e39}
+.button{display:inline-flex;align-items:center;justify-content:center;border:1px solid #d5c6b6;border-radius:12px;background:#fbf6ee;min-height:44px;padding:9px 14px;text-align:center}
+.primary{width:100%;color:white;background:#855a40;border-color:#855a40}
+.phone-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+#remembered{display:flex;margin:14px 0 6px}
+.secondary{padding:8px 0;background:none;border:none;font:inherit;font-size:.875rem;color:#78583f;text-decoration:underline;text-underline-offset:3px}
+#knownAddress{overflow-wrap:anywhere}
+button:disabled{opacity:.58;cursor:default}
+input,button,a{touch-action:manipulation}
+:focus-visible{outline:3px solid #895330;outline-offset:3px}
+form{margin-top:14px}
+label{display:block;font-weight:600;margin:0 0 6px}
+.code-row{display:flex;align-items:center;gap:8px}
+input{min-width:0;flex:1;padding:10px 12px;font:16px/1.45 ui-monospace,Consolas,monospace;color:inherit;background:#fcf8f0;border:1px solid #d7c9b8;border-radius:11px}
+#camera{margin-top:12px}
+video{display:block;background:#322d28;object-fit:cover;width:100%;aspect-ratio:4/3;border-radius:12px;margin-bottom:8px}
+#notice{font-size:.875rem;color:#804626;margin:10px 0 0}
+@media(min-width:720px){main{padding-top:min(15vh,150px)}}
 </style>
+<script src="./scan.js" defer></script>
+</head>
+<body>
 <main>
-<h1>收件箱</h1>
-<p>手机和电脑连上同一网络后，打开电脑上的收件箱。</p>
-<form id="entry">
-<fieldset aria-label="当前网络">
-<label><input type="radio" name="network" value="home" checked>家庭 Wi-Fi</label>
-<label><input type="radio" name="network" value="hotspot">个人热点</label>
-</fieldset>
-<p id="hint"></p>
-<details id="edit"><summary>手动设置地址</summary>
-<label for="addr">电脑地址</label>
-<input id="addr" type="text" spellcheck="false" autocapitalize="none" autocomplete="off" placeholder="电脑的局域网地址">
-</details>
-<small id="error" role="alert"></small>
-<button>打开收件箱</button>
-</form>
+<header>
+  <h1>收件箱</h1>
+  <p>手机和电脑连上同一 Wi-Fi 或热点。</p>
+</header>
+<section id="returning" hidden>
+  <h2 id="knownName">已记住的电脑</h2>
+  <small id="knownAddress"></small>
+  <a id="remembered" class="button primary">打开已记住的收件箱</a>
+  <p class="hint">在家连同一 Wi-Fi；在学校打不开时，先开手机热点并让电脑连上。</p>
+  <button id="changeComputer" class="secondary" type="button">换一台电脑或重新配对</button>
+  <a id="pairAgain" class="secondary" href="http://127.0.0.1:8765/?pair=1" hidden>显示配对码</a>
+</section>
+<div id="setup">
+<section class="row">
+  <div><h2>电脑端</h2><small>先启动电脑上的收件箱程序</small></div>
+  <a class="button" id="desktop" href="http://127.0.0.1:8765/?pair=1">我是电脑</a>
+</section>
+<section aria-labelledby="phone">
+  <h2 id="phone">手机端</h2>
+  <p class="hint">用手机扫电脑上的二维码，也可以输入连接码。</p>
+  <div class="phone-actions">
+    <button type="button" class="button primary" id="scan">扫码配对</button>
+    <button type="button" class="button" id="enterCode" aria-controls="codeForm" aria-expanded="false">输入连接码</button>
+  </div>
+  <div id="camera" hidden>
+    <video id="video" muted playsinline autoplay aria-label="扫码取景框"></video>
+    <button type="button" class="button" id="cancelScan">关闭相机</button>
+  </div>
+  <form id="codeForm" hidden>
+    <label for="code">电脑上显示的连接码</label>
+    <div class="code-row">
+      <input id="code" type="text" maxlength="48" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="XXXX-XXXX-XXXX">
+      <button class="button" type="submit">配对</button>
+    </div>
+  </form>
+  <p id="notice" role="status" hidden></p>
+</section>
+</div>
 </main>
-<script>
-"use strict";
-const form = document.querySelector("#entry");
-const addr = document.querySelector("#addr");
-const error = document.querySelector("#error");
-const key = "inbox-entry.";
-const button = form.querySelector("button");
-function read(name) { try { return localStorage.getItem(key + name) || ""; } catch { return ""; } }
-function save(name, value) { try { localStorage.setItem(key + name, value); } catch {} }
-const setup = new URLSearchParams(location.hash.slice(1));
-let incoming = destinationFor(setup.get("addr") || "");
-const preferred = setup.get("network") || read("network");
-form.elements.network.value = preferred === "hotspot" ? "hotspot" : "home";
-function showAddress() {
-  addr.value = incoming || read(form.elements.network.value);
-  document.querySelector("#hint").textContent = incoming ? "已带入电脑地址。选择当前网络，点下方按钮即可记住。" :
-    addr.value ? "已记住这个网络里的电脑。" : "首次使用：扫电脑「配对手机」里的二维码，进入手机收件箱后点「记住这台电脑」。";
-  button.hidden = !addr.value && !document.querySelector("#edit").open;
-  button.textContent = incoming ? "记住并打开收件箱" : "打开收件箱";
-  error.textContent = "";
-}
-showAddress();
-window.addEventListener("pageshow", event => { if (event.persisted) showAddress(); });
-document.querySelector("#edit").addEventListener("toggle", event => {
-  button.hidden = !addr.value && !event.target.open;
-});
-for (const radio of form.elements.network) radio.addEventListener("change", () => {
-  save("network", form.elements.network.value);
-  showAddress();
-});
-function destinationFor(value) {
-  const raw = value.trim().replace(/^http:\/\//i, "").replace(/\/$/, "");
-  const match = /^([a-z0-9.-]+)(?::(\d{1,5}))?$/i.exec(raw);
-  if (match) {
-    const host = match[1].toLowerCase();
-    const octets = host.split(".");
-    const v4 = octets.length === 4 && octets.every(s => /^(0|[1-9]\d{0,2})$/.test(s) && Number(s) < 256);
-    const localIP = v4 && (octets[0] === "10" || (octets[0] === "192" && octets[1] === "168") || (octets[0] === "172" && +octets[1] >= 16 && +octets[1] <= 31));
-    const localName = /^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.local$/.test(host);
-    const port = Number(match[2] || 8765);
-    if ((localIP || localName) && port > 0 && port < 65536) {
-      return "http://" + host + ":" + port + "/";
-    }
-  }
-  return "";
-}
-form.addEventListener("submit", event => {
-  event.preventDefault();
-  const destination = destinationFor(addr.value);
-  if (destination) {
-    save(form.elements.network.value, destination);
-    save("network", form.elements.network.value);
-    incoming = "";
-    history.replaceState(null, "", location.pathname);
-    location.assign(destination);
-    return;
-  }
-  document.querySelector("#edit").open = true;
-  error.textContent = "请填写电脑显示的局域网 IP 或 .local 首页地址。";
-  addr.focus();
-});
-</script>
+</body>
 </html>
