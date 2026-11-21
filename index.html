@@ -30,9 +30,11 @@ small{display:block;color:#756454;margin-top:8px} #error{color:#963f33}
 <label><input type="radio" name="network" value="home" checked>家庭 Wi-Fi</label>
 <label><input type="radio" name="network" value="hotspot">个人热点</label>
 </fieldset>
+<p id="hint"></p>
+<details id="edit"><summary>手动设置地址</summary>
 <label for="addr">电脑地址</label>
-<input id="addr" type="text" spellcheck="false" autocapitalize="none" autocomplete="off" placeholder="填写电脑的局域网地址" required aria-describedby="hint">
-<small id="hint">在电脑的「配对手机」里查看。每个网络的地址会分别记在这个浏览器。</small>
+<input id="addr" type="text" spellcheck="false" autocapitalize="none" autocomplete="off" placeholder="电脑的局域网地址">
+</details>
 <small id="error" role="alert"></small>
 <button>打开收件箱</button>
 </form>
@@ -43,21 +45,32 @@ const form = document.querySelector("#entry");
 const addr = document.querySelector("#addr");
 const error = document.querySelector("#error");
 const key = "inbox-entry.";
+const button = form.querySelector("button");
 function read(name) { try { return localStorage.getItem(key + name) || ""; } catch { return ""; } }
 function save(name, value) { try { localStorage.setItem(key + name, value); } catch {} }
-form.elements.network.value = read("network") === "hotspot" ? "hotspot" : "home";
+const setup = new URLSearchParams(location.hash.slice(1));
+let incoming = destinationFor(setup.get("addr") || "");
+const preferred = setup.get("network") || read("network");
+form.elements.network.value = preferred === "hotspot" ? "hotspot" : "home";
 function showAddress() {
-  addr.value = read(form.elements.network.value);
+  addr.value = incoming || read(form.elements.network.value);
+  document.querySelector("#hint").textContent = incoming ? "已带入电脑地址。选择当前网络，点下方按钮即可记住。" :
+    addr.value ? "已记住这个网络里的电脑。" : "首次使用：扫电脑「配对手机」里的二维码，进入手机收件箱后点「记住这台电脑」。";
+  button.hidden = !addr.value && !document.querySelector("#edit").open;
+  button.textContent = incoming ? "记住并打开收件箱" : "打开收件箱";
   error.textContent = "";
 }
 showAddress();
+window.addEventListener("pageshow", event => { if (event.persisted) showAddress(); });
+document.querySelector("#edit").addEventListener("toggle", event => {
+  button.hidden = !addr.value && !event.target.open;
+});
 for (const radio of form.elements.network) radio.addEventListener("change", () => {
   save("network", form.elements.network.value);
   showAddress();
 });
-form.addEventListener("submit", event => {
-  event.preventDefault();
-  const raw = addr.value.trim().replace(/^http:\/\//i, "").replace(/\/$/, "");
+function destinationFor(value) {
+  const raw = value.trim().replace(/^http:\/\//i, "").replace(/\/$/, "");
   const match = /^([a-z0-9.-]+)(?::(\d{1,5}))?$/i.exec(raw);
   if (match) {
     const host = match[1].toLowerCase();
@@ -67,13 +80,23 @@ form.addEventListener("submit", event => {
     const localName = /^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.local$/.test(host);
     const port = Number(match[2] || 8765);
     if ((localIP || localName) && port > 0 && port < 65536) {
-      const destination = "http://" + host + ":" + port + "/";
-      save(form.elements.network.value, destination);
-      save("network", form.elements.network.value);
-      location.assign(destination);
-      return;
+      return "http://" + host + ":" + port + "/";
     }
   }
+  return "";
+}
+form.addEventListener("submit", event => {
+  event.preventDefault();
+  const destination = destinationFor(addr.value);
+  if (destination) {
+    save(form.elements.network.value, destination);
+    save("network", form.elements.network.value);
+    incoming = "";
+    history.replaceState(null, "", location.pathname);
+    location.assign(destination);
+    return;
+  }
+  document.querySelector("#edit").open = true;
   error.textContent = "请填写电脑显示的局域网 IP 或 .local 首页地址。";
   addr.focus();
 });
