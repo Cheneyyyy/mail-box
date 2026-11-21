@@ -16,7 +16,6 @@ h1,h2,p{margin:0}
 h1{font-size:clamp(30px,5vw,40px);letter-spacing:-.045em;line-height:1.15}
 header p{margin:9px 0 20px;color:#6c6055}
 section{padding:18px;margin-top:14px;background:#fffcf7;border:1px solid #e3d8ca;border-radius:20px}
-.row{display:flex;align-items:center;justify-content:space-between;gap:12px}
 h2{font-size:19px;line-height:1.35}
 small,.hint{display:block;color:#75695e;font-size:.855rem}
 .hint{margin:5px 0 12px}
@@ -27,6 +26,9 @@ a,button{font:inherit;font-weight:650;text-decoration:none;cursor:pointer;color:
 #remembered{display:flex;margin:14px 0 6px}
 .secondary{padding:8px 0;background:none;border:none;font:inherit;font-size:.875rem;color:#78583f;text-decoration:underline;text-underline-offset:3px}
 #knownAddress{overflow-wrap:anywhere}
+#launchHelp{color:#75695e;font-size:.855rem;margin-top:12px}
+#launchHelp summary{cursor:pointer;color:#704e39}
+#launchHelp p{margin:7px 0}
 button:disabled{opacity:.58;cursor:default}
 input,button,a{touch-action:manipulation}
 :focus-visible{outline:3px solid #895330;outline-offset:3px}
@@ -39,7 +41,7 @@ video{display:block;background:#322d28;object-fit:cover;width:100%;aspect-ratio:
 #notice{font-size:.875rem;color:#804626;margin:10px 0 0}
 @media(min-width:720px){main{padding-top:min(15vh,150px)}}
 </style>
-<script src="./scan.js" defer></script>
+<script src="./scan.js?v=desktop-launch-1" defer></script>
 </head>
 <body>
 <main>
@@ -51,14 +53,22 @@ video{display:block;background:#322d28;object-fit:cover;width:100%;aspect-ratio:
   <h2 id="knownName">已记住的电脑</h2>
   <small id="knownAddress"></small>
   <a id="remembered" class="button primary">打开已记住的收件箱</a>
-  <p class="hint">在家连同一 Wi-Fi；在学校打不开时，先开手机热点并让电脑连上。</p>
+  <p class="hint" id="networkHint">在家连同一 Wi-Fi；在学校打不开时，先开手机热点并让电脑连上。</p>
   <button id="changeComputer" class="secondary" type="button">换一台电脑或重新配对</button>
-  <a id="pairAgain" class="secondary" href="http://127.0.0.1:8765/?pair=1" hidden>显示配对码</a>
+  <a id="pairAgain" class="secondary" href="cheney-inbox://pair" hidden>配对新手机</a>
 </section>
 <div id="setup">
-<section class="row">
-  <div><h2>电脑端</h2><small>先启动电脑上的收件箱程序</small></div>
-  <a class="button" id="desktop" href="http://127.0.0.1:8765/?pair=1">我是电脑</a>
+<section id="desktopCard">
+  <h2>电脑端</h2>
+  <p class="hint">浏览器询问是否打开收件箱时，点「打开」。</p>
+  <div class="phone-actions">
+    <a class="button primary" id="desktop" href="cheney-inbox://open">打开电脑收件箱</a>
+    <a class="button" id="desktopPair" href="cheney-inbox://pair">配对新手机</a>
+  </div>
+  <details id="launchHelp"><summary>没有打开？</summary>
+    <p>请在 Windows 的系统浏览器中打开此页。如果刚才取消了启动提示，可以再点一次。</p>
+    <p>如果提示找不到应用，请在电脑的收件箱文件夹双击「注册网页启动.cmd」，再点一次网页按钮。也可以双击 <code>start.bat</code> 直接打开。</p>
+  </details>
 </section>
 <section aria-labelledby="phone">
   <h2 id="phone">手机端</h2>

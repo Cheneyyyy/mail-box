@@ -21,12 +21,15 @@
     return "http://" + host + ":" + port + "/";
   }
   function showRoot(root, desktop = false) {
-    $("remembered").href = root;
+    $("remembered").href = desktop ? "cheney-inbox://open" : root;
+    $("remembered").textContent = desktop ? "打开电脑收件箱" : "打开已记住的收件箱";
     $("knownName").textContent = desktop ? "这台电脑" : "已记住的电脑";
     $("knownAddress").textContent = new URL(root).host;
     $("returning").hidden = false;
     $("setup").hidden = true;
     $("pairAgain").hidden = !desktop;
+    $("networkHint").hidden = desktop;
+    $(desktop ? "returning" : "desktopCard").append($("launchHelp"));
   }
   function remember(root) {
     try {
@@ -35,13 +38,16 @@
     } catch { /* Current page can still open the inbox. */ }
     showRoot(root);
   }
-  $("desktop").onclick = () => {
+  function rememberDesktop() {
     try { localStorage.setItem(prefix + "role", "desktop"); } catch {}
     showRoot("http://127.0.0.1:8765/", true);
-  };
+  }
+  $("desktop").onclick = rememberDesktop;
+  $("desktopPair").onclick = rememberDesktop;
   $("changeComputer").onclick = () => {
     $("returning").hidden = true;
     $("setup").hidden = false;
+    $("desktopCard").append($("launchHelp"));
     $("scan").focus();
   };
 
