@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="zh-CN">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="referrer" content="no-referrer">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; form-action 'none'; base-uri 'none'">
+<title>收件箱入口</title>
+<style>
+*{box-sizing:border-box}
+body{min-height:100svh;margin:0;display:grid;place-items:center;background:#f4efe6;color:#382d24;font:16px/1.55 -apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif}
+main{width:min(calc(100% - 32px),430px);padding:clamp(22px,6vw,36px);background:#fffdf8;border:1px solid #e4d9ca;border-radius:26px;box-shadow:0 12px 38px #58472e0e}
+h1{font-size:30px;letter-spacing:-.03em;line-height:1.2;margin:0 0 10px}
+p{color:#706050;margin:0 0 22px}
+fieldset{display:flex;gap:4px;border:0;padding:4px;background:#efe7d9;border-radius:14px;margin:0 0 20px}
+fieldset label{position:relative;flex:1;text-align:center;padding:8px;border-radius:11px;cursor:pointer}
+fieldset input{position:absolute;opacity:0}
+fieldset label:has(:checked){background:#fffdf8;color:#714527;box-shadow:0 2px 6px #37251316}
+fieldset label:focus-within,input:focus-visible,button:focus-visible{outline:2px solid #975e39;outline-offset:2px}
+label[for]{display:block;font-weight:600;margin-bottom:6px}
+#addr,button{font:inherit;width:100%;border-radius:13px;padding:12px}
+#addr{color:inherit;background:#fcf8f0;border:1px solid #d7c9b8}
+button{margin-top:16px;border:0;background:#88573a;color:white;font-weight:650;cursor:pointer}
+small{display:block;color:#756454;margin-top:8px} #error{color:#963f33}
+</style>
+<main>
+<h1>收件箱</h1>
+<p>手机和电脑连上同一网络后，打开电脑上的收件箱。</p>
+<form id="entry">
+<fieldset aria-label="当前网络">
+<label><input type="radio" name="network" value="home" checked>家庭 Wi-Fi</label>
+<label><input type="radio" name="network" value="hotspot">个人热点</label>
+</fieldset>
+<label for="addr">电脑地址</label>
+<input id="addr" type="text" spellcheck="false" autocapitalize="none" autocomplete="off" placeholder="填写电脑的局域网地址" required aria-describedby="hint">
+<small id="hint">在电脑的「配对手机」里查看。每个网络的地址会分别记在这个浏览器。</small>
+<small id="error" role="alert"></small>
+<button>打开收件箱</button>
+</form>
+</main>
+<script>
+"use strict";
+const form = document.querySelector("#entry");
+const addr = document.querySelector("#addr");
+const error = document.querySelector("#error");
+const key = "inbox-entry.";
+function read(name) { try { return localStorage.getItem(key + name) || ""; } catch { return ""; } }
+function save(name, value) { try { localStorage.setItem(key + name, value); } catch {} }
+form.elements.network.value = read("network") === "hotspot" ? "hotspot" : "home";
+function showAddress() {
+  addr.value = read(form.elements.network.value);
+  error.textContent = "";
+}
+showAddress();
+for (const radio of form.elements.network) radio.addEventListener("change", () => {
+  save("network", form.elements.network.value);
+  showAddress();
+});
+form.addEventListener("submit", event => {
+  event.preventDefault();
+  const raw = addr.value.trim().replace(/^http:\/\//i, "").replace(/\/$/, "");
+  const match = /^([a-z0-9.-]+)(?::(\d{1,5}))?$/i.exec(raw);
+  if (match) {
+    const host = match[1].toLowerCase();
+    const octets = host.split(".");
+    const v4 = octets.length === 4 && octets.every(s => /^(0|[1-9]\d{0,2})$/.test(s) && Number(s) < 256);
+    const localIP = v4 && (octets[0] === "10" || (octets[0] === "192" && octets[1] === "168") || (octets[0] === "172" && +octets[1] >= 16 && +octets[1] <= 31));
+    const localName = /^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.local$/.test(host);
+    const port = Number(match[2] || 8765);
+    if ((localIP || localName) && port > 0 && port < 65536) {
+      const destination = "http://" + host + ":" + port + "/";
+      save(form.elements.network.value, destination);
+      save("network", form.elements.network.value);
+      location.assign(destination);
+      return;
+    }
+  }
+  error.textContent = "请填写电脑显示的局域网 IP 或 .local 首页地址。";
+  addr.focus();
+});
+</script>
+</html>
