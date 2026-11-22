@@ -29,7 +29,8 @@
     $("setup").hidden = true;
     $("pairAgain").hidden = !desktop;
     $("networkHint").hidden = desktop;
-    $(desktop ? "returning" : "desktopCard").append($("launchHelp"));
+    $(desktop ? "returning" : "desktopCard").append($("launchPanel"));
+    resetLaunchPanel(desktop);
   }
   function remember(root) {
     try {
@@ -38,16 +39,34 @@
     } catch { /* Current page can still open the inbox. */ }
     showRoot(root);
   }
-  function rememberDesktop() {
-    try { localStorage.setItem(prefix + "role", "desktop"); } catch {}
-    showRoot("http://127.0.0.1:8765/", true);
+  function resetLaunchPanel(showLink) {
+    $("localOpen").hidden = !showLink;
+    $("localOpen").href = "http://127.0.0.1:8765/";
+    $("localOpen").textContent = "在当前标签打开收件箱";
+    $("launchFeedback").hidden = true;
+    $("launchHelp").open = false;
   }
-  $("desktop").onclick = rememberDesktop;
-  $("desktopPair").onclick = rememberDesktop;
+  function requestDesktop(event) {
+    const target = event.currentTarget.getAttribute("href");
+    if (!["cheney-inbox://open","cheney-inbox://pair"].includes(target)) return;
+    try { localStorage.setItem(prefix + "role", "desktop"); } catch {}
+    const pair = target === "cheney-inbox://pair";
+    $("localOpen").href = "http://127.0.0.1:8765/" + (pair ? "?pair=1" : "");
+    $("localOpen").textContent = pair ? "在当前标签打开配对页" : "在当前标签打开收件箱";
+    $("localOpen").hidden = false;
+    $("launchFeedback").textContent = "请查看其他窗口。如果浏览器提示「打开 Python」，请选择「打开」。程序已运行时，也可以直接进入：";
+    $("launchFeedback").hidden = false;
+    $("launchHelp").open = true;
+    $("localOpen").scrollIntoView({block:"nearest"});
+  }
+  for (const id of ["desktop","desktopPair","remembered","pairAgain"]) {
+    $(id).addEventListener("click", requestDesktop);
+  }
   $("changeComputer").onclick = () => {
     $("returning").hidden = true;
     $("setup").hidden = false;
-    $("desktopCard").append($("launchHelp"));
+    $("desktopCard").append($("launchPanel"));
+    resetLaunchPanel(false);
     $("scan").focus();
   };
 

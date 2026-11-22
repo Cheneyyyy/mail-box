@@ -29,6 +29,8 @@ a,button{font:inherit;font-weight:650;text-decoration:none;cursor:pointer;color:
 #launchHelp{color:#75695e;font-size:.855rem;margin-top:12px}
 #launchHelp summary{cursor:pointer;color:#704e39}
 #launchHelp p{margin:7px 0}
+#launchFeedback{margin:12px 0 8px;color:#513d2d}
+#localOpen{width:100%;margin-top:8px}
 button:disabled{opacity:.58;cursor:default}
 input,button,a{touch-action:manipulation}
 :focus-visible{outline:3px solid #895330;outline-offset:3px}
@@ -41,7 +43,7 @@ video{display:block;background:#322d28;object-fit:cover;width:100%;aspect-ratio:
 #notice{font-size:.875rem;color:#804626;margin:10px 0 0}
 @media(min-width:720px){main{padding-top:min(15vh,150px)}}
 </style>
-<script src="./scan.js?v=desktop-launch-1" defer></script>
+<script src="./scan.js?v=desktop-launch-2" defer></script>
 </head>
 <body>
 <main>
@@ -60,15 +62,18 @@ video{display:block;background:#322d28;object-fit:cover;width:100%;aspect-ratio:
 <div id="setup">
 <section id="desktopCard">
   <h2>电脑端</h2>
-  <p class="hint">浏览器询问是否打开收件箱时，点「打开」。</p>
   <div class="phone-actions">
     <a class="button primary" id="desktop" href="cheney-inbox://open">打开电脑收件箱</a>
     <a class="button" id="desktopPair" href="cheney-inbox://pair">配对新手机</a>
   </div>
-  <details id="launchHelp"><summary>没有打开？</summary>
-    <p>请在 Windows 的系统浏览器中打开此页。如果刚才取消了启动提示，可以再点一次。</p>
-    <p>如果提示找不到应用，请在电脑的收件箱文件夹双击「注册网页启动.cmd」，再点一次网页按钮。也可以双击 <code>start.bat</code> 直接打开。</p>
-  </details>
+  <div id="launchPanel">
+    <p id="launchFeedback" role="status" hidden></p>
+    <a id="localOpen" class="button" href="http://127.0.0.1:8765/" hidden>在当前标签打开收件箱</a>
+    <details id="launchHelp"><summary>没有打开？</summary>
+      <p>请用 Windows 的系统浏览器打开此页。如果取消了启动提示，可重新点一次。</p>
+      <p>程序未启动时，在电脑的收件箱文件夹双击 <code>start.bat</code>，再点「在当前标签打开」。如果浏览器提示找不到应用，可双击「注册网页启动.cmd」恢复网页启动。</p>
+    </details>
+  </div>
 </section>
 <section aria-labelledby="phone">
   <h2 id="phone">手机端</h2>
