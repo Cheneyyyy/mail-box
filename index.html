@@ -43,7 +43,7 @@ video{display:block;background:#322d28;object-fit:cover;width:100%;aspect-ratio:
 #notice{font-size:.875rem;color:#804626;margin:10px 0 0}
 @media(min-width:720px){main{padding-top:min(15vh,150px)}}
 </style>
-<script src="./scan.js?v=desktop-launch-2" defer></script>
+<script src="./scan.js?v=port-18765-1" defer></script>
 </head>
 <body>
 <main>
@@ -68,7 +68,7 @@ video{display:block;background:#322d28;object-fit:cover;width:100%;aspect-ratio:
   </div>
   <div id="launchPanel">
     <p id="launchFeedback" role="status" hidden></p>
-    <a id="localOpen" class="button" href="http://127.0.0.1:8765/" hidden>在当前标签打开收件箱</a>
+    <a id="localOpen" class="button" href="http://127.0.0.1:18765/" hidden>在当前标签打开收件箱</a>
     <details id="launchHelp"><summary>没有打开？</summary>
       <p>请用 Windows 的系统浏览器打开此页。如果取消了启动提示，可重新点一次。</p>
       <p>程序未启动时，在电脑的收件箱文件夹双击 <code>start.bat</code>，再点「在当前标签打开」。如果浏览器提示找不到应用，可双击「注册网页启动.cmd」恢复网页启动。</p>
@@ -89,7 +89,7 @@ video{display:block;background:#322d28;object-fit:cover;width:100%;aspect-ratio:
   <form id="codeForm" hidden>
     <label for="code">电脑上显示的连接码</label>
     <div class="code-row">
-      <input id="code" type="text" maxlength="48" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="XXXX-XXXX-XXXX">
+      <input id="code" type="text" maxlength="48" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="XXXX-XXXX-XXXX.18765">
       <button class="button" type="submit">配对</button>
     </div>
   </form>

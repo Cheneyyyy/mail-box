@@ -3,6 +3,8 @@
   const $ = id => document.getElementById(id);
   const alphabet = "0123456789ABCDEFGHJKMNPQRSTVWXYZ";
   const prefix = "inbox-entry.";
+  const defaultPort = 18765;
+  const desktopRoot = "http://127.0.0.1:" + defaultPort + "/";
   function read(key) {
     try { return localStorage.getItem(prefix + key) || ""; } catch { return ""; }
   }
@@ -11,14 +13,18 @@
       (ip[0] === "10" || (ip[0] === "192" && ip[1] === "168") ||
         (ip[0] === "172" && +ip[1] >= 16 && +ip[1] <= 31));
   }
-  function home(value, defaultPort = 8765) {
+  function home(value, fallbackPort = defaultPort) {
     const match = /^(?:http:\/\/)?([a-z0-9.-]+)(?::(\d{1,5}))?\/?$/i.exec(value);
     if (!match) return "";
     const host = match[1].toLowerCase();
     const name = /^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.local$/.test(host);
-    const port = Number(match[2] || defaultPort);
+    const port = Number(match[2] || fallbackPort);
     if ((!name && !isPrivateIP(host.split("."))) || port < 1 || port > 65535) return "";
     return "http://" + host + ":" + port + "/";
+  }
+  // 已记住的旧首页跟随服务迁移。正在使用的二维码和连接码按其原端口连接。
+  function migratedHome(value) {
+    return home(value).replace(/:8765\/$/, ":" + defaultPort + "/");
   }
   function showRoot(root, desktop = false) {
     $("remembered").href = desktop ? "cheney-inbox://open" : root;
@@ -35,13 +41,14 @@
   function remember(root) {
     try {
       localStorage.setItem(prefix + "last", root);
+      localStorage.setItem(prefix + "lastVersion", "2");
       localStorage.setItem(prefix + "role", "phone");
     } catch { /* Current page can still open the inbox. */ }
     showRoot(root);
   }
   function resetLaunchPanel(showLink) {
     $("localOpen").hidden = !showLink;
-    $("localOpen").href = "http://127.0.0.1:8765/";
+    $("localOpen").href = desktopRoot;
     $("localOpen").textContent = "在当前标签打开收件箱";
     $("launchFeedback").hidden = true;
     $("launchHelp").open = false;
@@ -51,7 +58,7 @@
     if (!["cheney-inbox://open","cheney-inbox://pair"].includes(target)) return;
     try { localStorage.setItem(prefix + "role", "desktop"); } catch {}
     const pair = target === "cheney-inbox://pair";
-    $("localOpen").href = "http://127.0.0.1:8765/" + (pair ? "?pair=1" : "");
+    $("localOpen").href = desktopRoot + (pair ? "?pair=1" : "");
     $("localOpen").textContent = pair ? "在当前标签打开配对页" : "在当前标签打开收件箱";
     $("localOpen").hidden = false;
     $("launchFeedback").textContent = "请查看其他窗口。如果浏览器提示「打开 Python」，请选择「打开」。程序已运行时，也可以直接进入：";
@@ -72,14 +79,16 @@
 
   function restore() {
     const fragment = new URLSearchParams(location.hash.slice(1));
-    const imported = home(fragment.get("addr") || "");
+    const imported = migratedHome(fragment.get("addr") || "");
     if (location.hash) history.replaceState(null, "", location.pathname + location.search);
     if (imported) remember(imported);
-    else if (read("role") === "desktop") showRoot("http://127.0.0.1:8765/", true);
+    else if (read("role") === "desktop") showRoot(desktopRoot, true);
     else {
       const network = read("network") === "hotspot" ? "hotspot" : "home";
-      const root = home(read("last")) || home(read(network)) || home(read(network === "home" ? "hotspot" : "home"));
-      if (root) showRoot(root);
+      const saved = read("last");
+      const root = (read("lastVersion") === "2" ? home(saved) : migratedHome(saved)) ||
+        migratedHome(read(network)) || migratedHome(read(network === "home" ? "hotspot" : "home"));
+      if (root) remember(root);
     }
   }
   restore();
@@ -99,6 +108,7 @@
     const digits = Number(value & ((1n << 27n) - 1n));
     if (ip > 0xffffffffn || digits >= 100000000) return null;
     const address = [24n,16n,8n,0n].map(shift => Number((ip >> shift) & 255n)).join(".");
+    // 旧版 12 位连接码约定使用 8765，新版连接码会附上实际端口。
     const root = home(address + ":" + (match[2] || "8765"));
     return root ? { root, path:"p#manual=" + String(digits).padStart(8,"0") } : null;
   }
