@@ -3,8 +3,8 @@
   const $ = id => document.getElementById(id);
   const alphabet = "0123456789ABCDEFGHJKMNPQRSTVWXYZ";
   const prefix = "inbox-entry.";
-  const defaultPort = 18765;
-  const desktopRoot = "http://127.0.0.1:" + defaultPort + "/";
+  const desktopRoot = $("localOpen").dataset.root;
+  const defaultPort = Number(new URL(desktopRoot).port);
   function read(key) {
     try { return localStorage.getItem(prefix + key) || ""; } catch { return ""; }
   }
@@ -26,10 +26,11 @@
   function migratedHome(value) {
     return home(value).replace(/:8765\/$/, ":" + defaultPort + "/");
   }
-  function showRoot(root, desktop = false) {
+  function showRoot(root, desktop = false, label = "已记住的电脑") {
+    $("remembered").onclick = null;
     $("remembered").href = desktop ? "cheney-inbox://open" : root;
     $("remembered").textContent = desktop ? "打开电脑收件箱" : "打开已记住的收件箱";
-    $("knownName").textContent = desktop ? "这台电脑" : "已记住的电脑";
+    $("knownName").textContent = desktop ? "这台电脑" : label;
     $("knownAddress").textContent = new URL(root).host;
     $("returning").hidden = false;
     $("setup").hidden = true;
@@ -41,14 +42,14 @@
   function remember(root) {
     try {
       localStorage.setItem(prefix + "last", root);
-      localStorage.setItem(prefix + "lastVersion", "2");
+      localStorage.setItem(prefix + "lastVersion", "3");
       localStorage.setItem(prefix + "role", "phone");
     } catch { /* Current page can still open the inbox. */ }
     showRoot(root);
   }
   function resetLaunchPanel(showLink) {
     $("localOpen").hidden = !showLink;
-    $("localOpen").href = desktopRoot;
+    $("localOpen").dataset.path = "";
     $("localOpen").textContent = "在当前标签打开收件箱";
     $("launchFeedback").hidden = true;
     $("launchHelp").open = false;
@@ -58,7 +59,7 @@
     if (!["cheney-inbox://open","cheney-inbox://pair"].includes(target)) return;
     try { localStorage.setItem(prefix + "role", "desktop"); } catch {}
     const pair = target === "cheney-inbox://pair";
-    $("localOpen").href = desktopRoot + (pair ? "?pair=1" : "");
+    $("localOpen").dataset.path = pair ? "?pair=1" : "";
     $("localOpen").textContent = pair ? "在当前标签打开配对页" : "在当前标签打开收件箱";
     $("localOpen").hidden = false;
     $("launchFeedback").textContent = "请查看其他窗口。如果浏览器提示「打开 Python」，请选择「打开」。程序已运行时，也可以直接进入：";
@@ -69,6 +70,29 @@
   for (const id of ["desktop","desktopPair","remembered","pairAgain"]) {
     $(id).addEventListener("click", requestDesktop);
   }
+  $("localOpen").onclick = async () => {
+    const button = $("localOpen");
+    const feedback = $("launchFeedback");
+    button.disabled = true;
+    feedback.hidden = false;
+    feedback.textContent = "正在确认这台电脑的收件箱…";
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 20000);
+    try {
+      const response = await fetch(desktopRoot + "healthz", {
+        credentials: "omit", cache: "no-store", redirect: "error", signal: controller.signal,
+      });
+      const info = response.ok && await response.json();
+      if (!info || info.app !== "local-inbox" || info.ok !== true) throw new Error();
+      location.assign(desktopRoot + (button.dataset.path || ""));
+    } catch {
+      feedback.textContent = "未能确认收件箱正在运行。请点「打开电脑收件箱」并允许启动程序。如果已经启动，请允许此网页访问本机上的应用或服务，再点一次。";
+      $("launchHelp").open = true;
+    } finally {
+      clearTimeout(timer);
+      button.disabled = false;
+    }
+  };
   $("changeComputer").onclick = () => {
     $("returning").hidden = true;
     $("setup").hidden = false;
@@ -79,16 +103,37 @@
 
   function restore() {
     const fragment = new URLSearchParams(location.hash.slice(1));
-    const imported = migratedHome(fragment.get("addr") || "");
+    const addr = fragment.get("addr") || "";
+    const confirmed = fragment.get("paired") === "1";
+    const imported = confirmed ? home(addr) : migratedHome(addr);
     if (location.hash) history.replaceState(null, "", location.pathname + location.search);
-    if (imported) remember(imported);
-    else if (read("role") === "desktop") showRoot(desktopRoot, true);
+    if (imported && confirmed && fragment.get("return") === "1") {
+      let expected;
+      try {
+        expected = sessionStorage.getItem(prefix + "pending");
+        sessionStorage.removeItem(prefix + "pending");
+      } catch { /* Storage may be disabled; the local inbox still works. */ }
+      if (expected === imported) {
+        remember(imported);
+        location.replace(imported);
+        return;
+      }
+    }
+    if (imported) {
+      // A link opened in another tab requires a click before changing its saved computer.
+      showRoot(imported, false, "链接中的电脑");
+      $("remembered").textContent = confirmed ? "记住并打开这台电脑" : "打开这台电脑";
+      if (confirmed) $("remembered").onclick = () => remember(imported);
+      return;
+    }
+    if (read("role") === "desktop") showRoot(desktopRoot, true);
     else {
       const network = read("network") === "hotspot" ? "hotspot" : "home";
       const saved = read("last");
-      const root = (read("lastVersion") === "2" ? home(saved) : migratedHome(saved)) ||
+      const version = read("lastVersion");
+      const root = (version === "2" || version === "3" ? home(saved) : migratedHome(saved)) ||
         migratedHome(read(network)) || migratedHome(read(network === "home" ? "hotspot" : "home"));
-      if (root) remember(root);
+      if (root) showRoot(root, false, version === "3" ? "已记住的电脑" : "上次打开的电脑");
     }
   }
   restore();
@@ -110,19 +155,19 @@
     const address = [24n,16n,8n,0n].map(shift => Number((ip >> shift) & 255n)).join(".");
     // 旧版 12 位连接码约定使用 8765，新版连接码会附上实际端口。
     const root = home(address + ":" + (match[2] || "8765"));
-    return root ? { root, path:"p#manual=" + String(digits).padStart(8,"0") } : null;
+    return root ? { root, fragment:"manual=" + String(digits).padStart(8,"0") } : null;
   }
   function decodeQR(raw) {
     const parts = /^http:\/\/([a-z0-9.-]+(?::\d{1,5})?)\/p#([a-z0-9_-]{32,128})$/i.exec(raw);
     if (!parts || raw !== raw.trim()) return null;
     const root = home(parts[1], 80);
-    return root ? { root, path:"p#" + parts[2] } : null;
+    return root ? { root, fragment:parts[2] } : null;
   }
   function connect(pair) {
-    remember(pair.root);
+    try { sessionStorage.setItem(prefix + "pending", pair.root); } catch { /* Optional. */ }
     $("code").value = "";
     stopCamera();
-    location.assign(pair.root + pair.path);
+    location.assign(pair.root + "p?entry=1#" + pair.fragment);
   }
   $("enterCode").onclick = () => {
     stopCamera();
